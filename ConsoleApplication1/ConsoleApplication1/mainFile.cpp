@@ -74,6 +74,142 @@ void initializeGraph(Graph &g,
 	}
 }
 
+// Mark all nodes in g as not visited.
+void clearVisited(Graph &g)
+{
+	//loops through all the vertices
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
+	for (Graph::vertex_iterator v = vItrRange.first; v != vItrRange.second; ++v)
+	{
+		//marks each vertice as not visited		
+		g[*v].visited = false;
+	}
+}
+
+void findPathDFSRecursive(Graph &g, Graph::vertex_descriptor node)
+{
+	//mark the current node as visited
+	g[node].visited = true;
+	//as long as the end node isn't finsihed. a.k.a the path to the end isn't found
+	// then keep searching
+	
+	//iterate through all the adjacnet nodes of the current node to visit them
+	pair<Graph::adjacency_iterator, Graph::adjacency_iterator> vItrRange = adjacent_vertices(node, g);
+	for (Graph::adjacency_iterator vItr = vItrRange.first; vItr != vItrRange.second; ++vItr)
+	{
+		//if the neigboring node has not been visited then go give them a visit
+		//dont' ignore any of your neigbors neigbors!!!
+		if (!g[*vItr].visited)
+		{
+			//recursively call the function so that the function works :|
+			findPathDFSRecursive(g, *vItr);
+		}
+
+	}
+}
+
+bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
+{
+	//declare all them variables
+	Graph::adjacency_iterator vItr;
+	queue<Graph::vertex_descriptor> path;
+	pair<Graph::adjacency_iterator, Graph::adjacency_iterator> vItrRange;
+	Graph::vertex_descriptor v;
+	//make sure all the nodes started unvisited
+	clearVisited(g);
+	//push the startNode onto the queue because 
+	//otherwise the queue would be empty which would 
+	//mean the while loop would never execute
+	path.push(startNode);
+	//set the start node to true because we pushed it onto the queue
+	//which means we visited it
+	g[startNode].visited = true;
+	//contiunue looping until the queue is empty which means that 
+	//there was no path found
+	while (!path.empty())
+	{
+		//set v equal to the node currently at the front of the queue
+		v = path.front();
+		//find the adajcent vertices for node v
+		vItrRange = adjacent_vertices(v, g);
+		//loop through all the adajcent nodes of v
+		for (vItr = vItrRange.first; vItr != vItrRange.second; ++vItr)
+		{
+			//if an adajcent node has not been visited yet, then visit that node and
+			//push it onto the back of the queue.
+			//If an adjacent node is already visited, then that means that
+			//there is a cycle in that graph because that node has already been visited
+			if (g[*vItr].visited)
+			{
+				return false;
+			}
+			else if (!g[*vItr].visited)
+			{
+				//visit the current adajcent node
+				g[*vItr].visited = true;
+				//push the current adjacent node to the back of the queue
+				path.push(*vItr);
+				//set the position in the pred vector for the current node to the
+				//value of the descriptor for its predecessor. This allows linking of
+				//each node so the shortest path to a node can be recreated by finding
+				//its predessesor nodes
+				g[*vItr].pred = v;
+			}
+		}
+		//if the end node hasn't been found then pop the front of the queue
+		//so the process can keep going.
+		path.pop();		
+	}
+	//if the graph traversal finishes without the graph trying to
+	//visit an already visited node, that means there are no cycles
+	// therefore, return true;
+	return true;
+}
+
+
+//create a graph sf that contains a spanning forest on the graph g.
+void findSpanningForest(Graph &g1, Graph &sf)
+{
+
+}
+
+//Returns true if the graph g is connected. Otherwise false
+bool isConnected(Graph &g)
+{
+	//mark all the nodes in the graph as not visited
+	clearVisited(g);
+	//find the start node for the graph
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
+	//do a graph traversal starting at any node.
+	findPathDFSRecursive(g, *(vItrRange.first));
+	// loop through all the nodes and if there is a node that wasn't visited, then
+	// return false because the graph is not connected, otherwise if all the nodes
+	// are visited, then return true because that means the graph is connected
+	vItrRange = vertices(g);
+	for (Graph::vertex_iterator vItr = vItrRange.first; vItr != vItrRange.second; ++vItr)
+	{
+		if (!g[*vItr].visited)
+		{
+			return false;
+		}
+	}
+	return true;
+
+}
+
+//Returns true if the graph g contains a cycle. Otherwise, returns false
+bool isCyclic(Graph &g)
+{
+	//Run Breadth first traversal, and if 
+	// the traversal tries to push a node
+	// that is already visited onto the queue, 
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
+	clearVisited(g);
+	//return the result of BFSFindCycle
+	return BFSFindCycle(g, *(vItrRange.first));
+}
+
+
 int main()
 {
 	char x;
@@ -115,7 +251,7 @@ int main()
 		bool cyclic = false;
 
 		cout << "Calling isCyclic" << endl;
-		// cyclic = isCyclic(g); //not created yet
+		//cyclic = isCyclic(g); //not created yet
 
 		if (cyclic)
 			cout << "Graph contains a cycle" << endl;
@@ -140,7 +276,6 @@ int main()
 
 		//findSpanningForest(g, sf); //not created yet
 
-		//cout << "Spanning forest weight: " << totalEdgeWeight(sf) / 2 << endl; //not created yet
 		cout << endl;
 
 		cout << "Calling isConnected" << endl;
