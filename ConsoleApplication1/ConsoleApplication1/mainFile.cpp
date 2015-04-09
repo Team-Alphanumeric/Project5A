@@ -11,7 +11,6 @@
 
 #include <boost/graph/adjacency_list.hpp>
 #include "heapV.h"
-#include "disjointSetV.h"
 
 #define LargeValue 99999999
 
@@ -112,11 +111,11 @@ int main()
 
 		// cout << g;
 
-		bool connected;
-		bool cyclic;
+		bool connected = false;
+		bool cyclic = false;
 
 		cout << "Calling isCyclic" << endl;
-		cyclic = isCyclic(g);
+		// cyclic = isCyclic(g); //not created yet
 
 		if (cyclic)
 			cout << "Graph contains a cycle" << endl;
@@ -126,7 +125,7 @@ int main()
 		cout << endl;
 
 		cout << "Calling isConnected" << endl;
-		connected = isConnected(g);
+		//connected = isConnected(g); // not created yet
 
 		if (connected)
 			cout << "Graph is connected" << endl;
@@ -139,13 +138,13 @@ int main()
 		// Initialize an empty graph to contain the spanning forest
 		Graph sf(num_vertices(g));
 
-		findSpanningForest(g, sf);
+		//findSpanningForest(g, sf); //not created yet
 
-		cout << "Spanning forest weight: " << totalEdgeWeight(sf) / 2 << endl;
+		//cout << "Spanning forest weight: " << totalEdgeWeight(sf) / 2 << endl; //not created yet
 		cout << endl;
 
 		cout << "Calling isConnected" << endl;
-		connected = isConnected(sf);
+		//connected = isConnected(sf); //not created yet
 
 		if (connected)
 			cout << "Graph is connected" << endl;
@@ -154,7 +153,7 @@ int main()
 		cout << endl;
 
 		cout << "Calling isCyclic" << endl;
-		cyclic = isCyclic(sf);
+		//cyclic = isCyclic(sf); //not created yet
 
 		if (cyclic)
 			cout << "Graph contains a cycle" << endl;

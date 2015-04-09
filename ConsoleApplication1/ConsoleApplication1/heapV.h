@@ -7,7 +7,7 @@
 #ifndef Heap_h
 #define Heap_h
 
-#define LargeValue 999999999
+//#define LargeValue 999999999 previously defined
 #define SmallValue -999999999
 
 #include "d_except.h"
