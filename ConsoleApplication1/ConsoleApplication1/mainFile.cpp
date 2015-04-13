@@ -86,6 +86,26 @@ void clearVisited(Graph &g)
 	}
 }
 
+void clearMarkedEdges(Graph &g)
+{
+	//loop through all the edges
+	pair<Graph::edge_iterator, Graph::edge_iterator> eItrRange = edges(g);
+	for (Graph::edge_iterator eItr = eItrRange.first; eItr != eItrRange.second; ++eItr)
+	{
+		g[*eItr].marked = false;
+	}
+}
+
+void clearPred(Graph &g)
+{
+	//loops through all the vertices
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
+	for (Graph::vertex_iterator v = vItrRange.first; v != vItrRange.second; ++v)
+	{
+		//marks each vertice as not visited		
+		g[*v].pred = NULL;
+	}
+}
 void findPathDFSRecursive(Graph &g, Graph::vertex_descriptor node)
 {
 	//mark the current node as visited
@@ -108,6 +128,58 @@ void findPathDFSRecursive(Graph &g, Graph::vertex_descriptor node)
 	}
 }
 
+void findPathBFSSpanningTree(Graph &g, Graph::vertex_descriptor startNode)
+{
+	//declare all them vuriables
+	Graph::adjacency_iterator vItr;
+	pair<Graph::adjacency_iterator, Graph::adjacency_iterator> vItrRange;
+	queue<Graph::vertex_descriptor> path;
+	Graph::vertex_descriptor v;
+	//push the startNode onto the queue because 
+	//otherwise the queue would be empty which would 
+	//mean the while loop would never execute
+	path.push(startNode);
+	//set the start node to true because we pushed it onto the queue
+	//which means we visited it
+	g[startNode].visited = true;
+	//contiunue looping until the queue is empty 
+	while (!path.empty())
+	{
+		//set v equal to the node currently at the front of the queue
+		v = path.front();
+		//find the adajcent vertices for node v
+		vItrRange = adjacent_vertices(v, g);
+		//loop through all the adajcent nodes of v
+		for (vItr = vItrRange.first; vItr != vItrRange.second; ++vItr)
+		{
+			cout << "The current node is " << v << endl;
+			cout << "The predessor of node " << v << " is " << g[v].pred << endl;
+			cout << "The adajcent node is " << *vItr << endl;
+			//if an adajcent node has not been visited yet, then visit that node and
+			//push it onto the back of the queue
+			if (!g[*vItr].visited)
+			{
+				cout << "Mark an edge " << endl;
+				//visit the current adajcent node
+				g[*vItr].visited = true;	
+				//mark the edge in between those nodes as true because
+				// there should be an edge between them in the resulting graph
+				pair<Graph::edge_descriptor, bool> checkEdge1 = edge(v, *vItr, g);
+				pair<Graph::edge_descriptor, bool> checkEdge2 = edge(*vItr, v, g);
+				g[checkEdge1.first].marked = true;
+				g[checkEdge2.first].marked = true;				
+				//push the current adjacent node to the back of the queue
+				path.push(*vItr);
+				//set the position in the pred vector for the current node to the
+				//value of the descriptor for its predecessor. 
+				g[*vItr].pred = v;
+			}
+			cout << endl;
+		}		
+		path.pop();		
+	}
+}
+
 bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 {
 	//declare all them variables
@@ -122,6 +194,7 @@ bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 	//set the start node to true because we pushed it onto the queue
 	//which means we visited it
 	g[startNode].visited = true;
+	cout << "Start node is: " << startNode << endl;
 	//contiunue looping until the queue is empty which means that 
 	//there was no path found
 	while (!path.empty())
@@ -135,13 +208,21 @@ bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 		{
 			//if an adajcent node has not been visited yet, then visit that node and
 			//push it onto the back of the queue.
-			//If an adjacent node is already visited, then that means that
+			//If an adjacent node is already visited that is not
+			//the predessor, then that means that
+
+			//cout << "The current node is " << v << endl;
+			//cout << "The predessor of node " << v << " is " << g[v].pred << endl;			
+			//cout << "The adajcent node is " << *vItr << endl << endl;
+
 			//there is a cycle in that graph because that node has already been visited
-			if (g[*vItr].visited)
+			if (g[*vItr].visited && (g[v].pred) != *vItr)
 			{
+				cout << "Cycle found " << endl;
+				system("pause");
 				return true;
 			}
-			else 
+			else if (!g[*vItr].visited)
 			{
 				//visit the current adajcent node
 				g[*vItr].visited = true;
@@ -166,9 +247,52 @@ bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 
 
 //create a graph sf that contains a spanning forest on the graph g.
-void findSpanningForest(Graph &g1, Graph &sf)
+void findSpanningForest(Graph &g, Graph &sf)
 {
-	//run BFS on the graph 
+	// clear the given graph
+	Graph temp; sf = temp;
+
+	//all visited nodes and marked edges
+	clearVisited(g);
+	clearMarkedEdges(g);	
+	//for every connected graph, find a spanning tree
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
+	for (Graph::vertex_iterator vItr = vItrRange.first; vItr != vItrRange.second; ++vItr)
+	{
+		if (!g[*vItr].visited)
+		{
+			//run BFS on the graph 
+			//marks all the edges that are created for the spanning tree
+			findPathBFSSpanningTree(g, *vItr);
+		}
+	}
+
+	// create a graph with the same number of vertices
+	for (int i = 0; i < num_vertices(g); i++)
+	{
+		add_vertex(sf);
+	}
+	// add an edge to the new graph (sf) corresponding to the marked edges in the old graph (g)
+	pair<Graph::edge_iterator, Graph::edge_iterator> eItrRange = edges(g);
+	for (Graph::edge_iterator eItr = eItrRange.first; eItr != eItrRange.second; ++eItr)
+	{
+		// Returns the target vertex of edge e.
+		Graph::vertex_descriptor targetVer = target(*eItr, g);
+		// Returns the source vertex of edge e.
+		Graph::vertex_descriptor sourceVer = source(*eItr, g);
+
+		//if the edge is not marked
+		if (g[*eItr].marked)
+		{
+			add_edge(targetVer, sourceVer, sf);
+			cout << "Keeping edge between vertices " << targetVer << " and " << sourceVer << endl;
+		}
+		else
+		{
+			cout << "Removing edge between vertices " << targetVer << " and " << sourceVer << endl;
+		}
+	}
+	return;
 }
 
 //Returns true if the graph g is connected. Otherwise false
@@ -192,15 +316,17 @@ bool isConnected(Graph &g)
 		}
 	}
 	return true;
-
 }
 
 //Returns true if the graph g contains a cycle. Otherwise, returns false
 bool isCyclic(Graph &g)
 {
+	bool result = false;
 	//Run Breadth first traversal, and if 
 	// the traversal tries to push a node
 	// that is already visited onto the queue, 
+	clearVisited(g);
+	clearPred(g);
 	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
 	//loop through all the nodes and start the isCyclic on the first node that is 
 	// not visited
@@ -208,14 +334,16 @@ bool isCyclic(Graph &g)
 	{
 		if (!g[*vItr].visited)
 		{
-			//return the result of BFSFindCycle
-			return BFSFindCycle(g, *vItr);
+			//accumlate whether or not cycles exists
+			//for each connected graph
+			result =  result || BFSFindCycle(g, *vItr);
+			cout << "The result " << result << endl;
 		}
 	}
-	cout << "already visited" << endl;
+	cout << endl;
 	//there are no unvisted nodes, so
 	//there are no cycles so return false
-	return false;
+	return result;
 }
 
 
@@ -229,7 +357,7 @@ int main()
 	// Read the name of the graph from the keyboard or
 	// hard code it here for testing.
 
-	fileName = "graph3.txt";
+	fileName = "graph2.txt";
 
 	//   cout << "Enter filename" << endl;
 	//   cin >> fileName;
@@ -255,13 +383,13 @@ int main()
 		cout << "Num edges: " << num_edges(g) << endl;
 		cout << endl;
 
-		// cout << g;
+		//cout << g;
 		clearVisited(g);
 		bool connected = false;
 		bool cyclic = false;
 
 		cout << "Calling isCyclic" << endl;
-		cyclic = isCyclic(g); //not created yet
+		cyclic = isCyclic(g); 
 
 		if (cyclic)
 			cout << "Graph contains a cycle" << endl;
@@ -271,7 +399,7 @@ int main()
 		cout << endl;
 
 		cout << "Calling isConnected" << endl;
-		connected = isConnected(g); // not created yet
+		connected = isConnected(g); 
 
 		if (connected)
 			cout << "Graph is connected" << endl;
@@ -283,13 +411,13 @@ int main()
 
 		// Initialize an empty graph to contain the spanning forest
 		Graph sf(num_vertices(g));
-
-		//findSpanningForest(g, sf); //not created yet
+		clearVisited(sf);
+		findSpanningForest(g, sf); 
 
 		cout << endl;
 
 		cout << "Calling isConnected" << endl;
-		connected = isConnected(sf); //not created yet
+		connected = isConnected(sf); 
 
 		if (connected)
 			cout << "Graph is connected" << endl;
@@ -298,7 +426,7 @@ int main()
 		cout << endl;
 
 		cout << "Calling isCyclic" << endl;
-		cyclic = isCyclic(sf); //not created yet
+		cyclic = isCyclic(sf); 
 
 		if (cyclic)
 			cout << "Graph contains a cycle" << endl;
