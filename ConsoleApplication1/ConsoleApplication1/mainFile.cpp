@@ -152,14 +152,10 @@ void findPathBFSSpanningTree(Graph &g, Graph::vertex_descriptor startNode)
 		//loop through all the adajcent nodes of v
 		for (vItr = vItrRange.first; vItr != vItrRange.second; ++vItr)
 		{
-			cout << "The current node is " << v << endl;
-			cout << "The predessor of node " << v << " is " << g[v].pred << endl;
-			cout << "The adajcent node is " << *vItr << endl;
 			//if an adajcent node has not been visited yet, then visit that node and
 			//push it onto the back of the queue
 			if (!g[*vItr].visited)
 			{
-				cout << "Mark an edge " << endl;
 				//visit the current adajcent node
 				g[*vItr].visited = true;	
 				//mark the edge in between those nodes as true because
@@ -174,7 +170,6 @@ void findPathBFSSpanningTree(Graph &g, Graph::vertex_descriptor startNode)
 				//value of the descriptor for its predecessor. 
 				g[*vItr].pred = v;
 			}
-			cout << endl;
 		}		
 		path.pop();		
 	}
@@ -194,7 +189,6 @@ bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 	//set the start node to true because we pushed it onto the queue
 	//which means we visited it
 	g[startNode].visited = true;
-	cout << "Start node is: " << startNode << endl;
 	//contiunue looping until the queue is empty which means that 
 	//there was no path found
 	while (!path.empty())
@@ -219,7 +213,6 @@ bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 			if (g[*vItr].visited && (g[v].pred) != *vItr)
 			{
 				cout << "Cycle found " << endl;
-				system("pause");
 				return true;
 			}
 			else if (!g[*vItr].visited)
@@ -285,11 +278,11 @@ void findSpanningForest(Graph &g, Graph &sf)
 		if (g[*eItr].marked)
 		{
 			add_edge(targetVer, sourceVer, sf);
-			cout << "Keeping edge between vertices " << targetVer << " and " << sourceVer << endl;
+			//cout << "Keeping edge between vertices " << targetVer << " and " << sourceVer << endl;
 		}
 		else
 		{
-			cout << "Removing edge between vertices " << targetVer << " and " << sourceVer << endl;
+			//cout << "Removing edge between vertices " << targetVer << " and " << sourceVer << endl;
 		}
 	}
 	return;
@@ -337,7 +330,6 @@ bool isCyclic(Graph &g)
 			//accumlate whether or not cycles exists
 			//for each connected graph
 			result =  result || BFSFindCycle(g, *vItr);
-			cout << "The result " << result << endl;
 		}
 	}
 	cout << endl;
@@ -357,7 +349,7 @@ int main()
 	// Read the name of the graph from the keyboard or
 	// hard code it here for testing.
 
-	fileName = "graph2.txt";
+	fileName = "graph3.txt";
 
 	//   cout << "Enter filename" << endl;
 	//   cin >> fileName;
