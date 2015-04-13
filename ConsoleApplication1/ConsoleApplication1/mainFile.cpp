@@ -115,8 +115,6 @@ bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 	queue<Graph::vertex_descriptor> path;
 	pair<Graph::adjacency_iterator, Graph::adjacency_iterator> vItrRange;
 	Graph::vertex_descriptor v;
-	//make sure all the nodes started unvisited
-	clearVisited(g);
 	//push the startNode onto the queue because 
 	//otherwise the queue would be empty which would 
 	//mean the while loop would never execute
@@ -141,9 +139,9 @@ bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 			//there is a cycle in that graph because that node has already been visited
 			if (g[*vItr].visited)
 			{
-				return false;
+				return true;
 			}
-			else if (!g[*vItr].visited)
+			else 
 			{
 				//visit the current adajcent node
 				g[*vItr].visited = true;
@@ -162,15 +160,15 @@ bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 	}
 	//if the graph traversal finishes without the graph trying to
 	//visit an already visited node, that means there are no cycles
-	// therefore, return true;
-	return true;
+	// therefore, return false;
+	return false;
 }
 
 
 //create a graph sf that contains a spanning forest on the graph g.
 void findSpanningForest(Graph &g1, Graph &sf)
 {
-
+	//run BFS on the graph 
 }
 
 //Returns true if the graph g is connected. Otherwise false
@@ -204,9 +202,20 @@ bool isCyclic(Graph &g)
 	// the traversal tries to push a node
 	// that is already visited onto the queue, 
 	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
-	clearVisited(g);
-	//return the result of BFSFindCycle
-	return BFSFindCycle(g, *(vItrRange.first));
+	//loop through all the nodes and start the isCyclic on the first node that is 
+	// not visited
+	for (Graph::vertex_iterator vItr = vItrRange.first; vItr != vItrRange.second; ++vItr)
+	{
+		if (!g[*vItr].visited)
+		{
+			//return the result of BFSFindCycle
+			return BFSFindCycle(g, *vItr);
+		}
+	}
+	cout << "already visited" << endl;
+	//there are no unvisted nodes, so
+	//there are no cycles so return false
+	return false;
 }
 
 
@@ -220,7 +229,7 @@ int main()
 	// Read the name of the graph from the keyboard or
 	// hard code it here for testing.
 
-	fileName = "";
+	fileName = "graph3.txt";
 
 	//   cout << "Enter filename" << endl;
 	//   cin >> fileName;
@@ -229,6 +238,7 @@ int main()
 	if (!fin)
 	{
 		cerr << "Cannot open " << fileName << endl;
+		system("pause");
 		exit(1);
 	}
 
@@ -246,12 +256,12 @@ int main()
 		cout << endl;
 
 		// cout << g;
-
+		clearVisited(g);
 		bool connected = false;
 		bool cyclic = false;
 
 		cout << "Calling isCyclic" << endl;
-		//cyclic = isCyclic(g); //not created yet
+		cyclic = isCyclic(g); //not created yet
 
 		if (cyclic)
 			cout << "Graph contains a cycle" << endl;
@@ -261,7 +271,7 @@ int main()
 		cout << endl;
 
 		cout << "Calling isConnected" << endl;
-		//connected = isConnected(g); // not created yet
+		connected = isConnected(g); // not created yet
 
 		if (connected)
 			cout << "Graph is connected" << endl;
@@ -279,7 +289,7 @@ int main()
 		cout << endl;
 
 		cout << "Calling isConnected" << endl;
-		//connected = isConnected(sf); //not created yet
+		connected = isConnected(sf); //not created yet
 
 		if (connected)
 			cout << "Graph is connected" << endl;
@@ -288,13 +298,14 @@ int main()
 		cout << endl;
 
 		cout << "Calling isCyclic" << endl;
-		//cyclic = isCyclic(sf); //not created yet
+		cyclic = isCyclic(sf); //not created yet
 
 		if (cyclic)
 			cout << "Graph contains a cycle" << endl;
 		else
 			cout << "Graph does not contain a cycle" << endl;
 		cout << endl;
+		system("pause");
 	}
 	catch (indexRangeError &ex)
 	{
