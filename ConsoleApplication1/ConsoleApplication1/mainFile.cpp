@@ -75,17 +75,30 @@ void initializeGraph(Graph &g,
 }
 
 // Mark all nodes in g as not visited.
+void setNodeWeights(int weight, Graph &g)
+{
+	//loops through all the vertices
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
+	for (Graph::vertex_iterator v = vItrRange.first; v != vItrRange.second; ++v)
+	{
+		//marks each vertex as not visited		
+		g[*v].weight = weight;
+	}
+}
+
+// Mark all nodes in g as not visited.
 void clearVisited(Graph &g)
 {
 	//loops through all the vertices
 	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
 	for (Graph::vertex_iterator v = vItrRange.first; v != vItrRange.second; ++v)
 	{
-		//marks each vertice as not visited		
+		//marks each vertex as not visited		
 		g[*v].visited = false;
 	}
 }
 
+// Unmark all edges in g 
 void clearMarkedEdges(Graph &g)
 {
 	//loop through all the edges
@@ -93,6 +106,18 @@ void clearMarkedEdges(Graph &g)
 	for (Graph::edge_iterator eItr = eItrRange.first; eItr != eItrRange.second; ++eItr)
 	{
 		g[*eItr].marked = false;
+	}
+}
+
+// Unmark all vertices in g
+void clearMarkedNodes(Graph &g)
+{
+	//loops through all the vertices
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
+	for (Graph::vertex_iterator v = vItrRange.first; v != vItrRange.second; ++v)
+	{
+		//marks each vertex as unmarked
+		g[*v].marked = false;
 	}
 }
 
@@ -337,6 +362,55 @@ bool isCyclic(Graph &g)
 	//there are no cycles so return false
 	return result;
 }
+
+void msfPrim(Graph &g, Graph &sf)
+{
+	// Unmark all nodes
+	clearMarkedNodes(g);
+	
+	// set all nodes as unreachable
+	setNodeWeights(LargeValue,g);
+	
+	// declare and initialize a heap for the nodes
+	heapV nodes(); 
+	
+	// create vertices corresponding to the previous graph
+	sf = Graph(num_vertices(g)); // set sf to a new graph initialized to same # of vertices 
+	
+	// declare algorithm variables: edge e, vertices u,v
+	edge_descriptor e;
+	vertex_descriptor u,v; 
+	
+	// Attempt to mark the start node
+	try 
+	{	g[0].marked = true; }
+	catch (...)
+	{	throw rangeError("In msfPrim: Unable to mark the start node");	}
+	
+	// For(i=1:numNodes-1)
+	for(int i=0; i<num_vertices(g) - 1; i++)
+	{
+		/// Find the/a cheapest edge e=(u,v) such that u is marked, v is unmarked and e is cheapest
+		
+		// get cheapest source edge, u
+		u = nodes.getMinHeapMinimum();
+		
+		// Add edge to graph sf
+		add_edge(u,v,sf);
+		
+		// Mark target node v
+		g[v].marked = true;
+		
+		// add v to the heap
+		nodes.minHeapInsert(v);
+		
+		// reset the heap after inserting
+		nodes.minHeapDecreaseKey(nodes.getIndex(v),g);
+		
+	}
+
+}
+
 
 
 int main()
