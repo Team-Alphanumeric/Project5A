@@ -366,34 +366,72 @@ bool isCyclic(Graph &g)
 void msfPrim(Graph &g, Graph &sf)
 {
 	// Unmark all nodes
-	clearMarkedNodes(g);
+	clearVisited(g);
 	
 	// set all nodes as unreachable
 	setNodeWeights(LargeValue,g);
 	
-	// declare and initialize a heap for the nodes
-	heapV nodes(); 
+	// Attempt to mark and clear weight of the start node
+	try 
+	{	g[0].visited = true;	g[0].weight = 0; }
+	catch (...)
+	{	throw rangeError("In msfPrim: Unable to mark and/or w8 the start node");	}
 	
-	// create vertices corresponding to the previous graph
+	
+	// declare heap for the nodes
+	heapV nodes();
+
+	// create vector for adding all of the nodes
+	vector<vertex_descriptor> all_nodes;
+		
+	// Get a pair containing iterators pointing the beginning and end of the
+	// list of nodes
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(Graph &g);
+	
+	// Loop over all nodes in the graph
+	for (Graph::vertex_iterator vItr= vItrRange.first; vItr != vItrRange.second; ++vItr)
+	{	all_nodes.push_back(*vItr);	}
+	
+	// initilize the heap with all of the nodes
+	nodes.initializeMinHeap(all_nodes,g);
+		
+	// create graph with same number of vertices as the previous graph
 	sf = Graph(num_vertices(g)); // set sf to a new graph initialized to same # of vertices 
 	
 	// declare algorithm variables: edge e, vertices u,v
 	edge_descriptor e;
 	vertex_descriptor u,v; 
 	
-	// Attempt to mark the start node
-	try 
-	{	g[0].marked = true; }
-	catch (...)
-	{	throw rangeError("In msfPrim: Unable to mark the start node");	}
-	
 	// For(i=1:numNodes-1)
 	for(int i=0; i<num_vertices(g) - 1; i++)
 	{
-		/// Find the/a cheapest edge e=(u,v) such that u is marked, v is unmarked and e is cheapest
+		//// Find the/a cheapest edge e=(u,v) such that u is marked, v is unmarked and e is cheapest
 		
-		// get cheapest source edge, u
-		u = nodes.getMinHeapMinimum();
+		// get cheapest source node, u
+		u = nodes.extractMinHeapMinimum(g);
+		
+		/// find cheapest edge of cheapest node
+		// set e to default value
+		e = NULL; 
+		
+		// declare edge weight max so far for this group of edges
+		ewmax = LargeValue;
+		
+		// Loop over all edges in the graph
+		for (Graph::edge_iterator eItr= eItrRange.first; eItr != eItrRange.second; ++eItr)
+		{
+			// if this edge is cheaper than previous 
+			// and the source matches the cheapest node
+			if( (g[*eItr].weight < ewmax ) && (source(e,g) == u) )
+			{
+				// update edge we are using
+				e = *eItr;
+				// update maximum weight so far
+				ewmax = g[e].weight;
+			}
+		}
+		
+		if(e == NULL) { throw baseException("In msfPrim: Unable to find edge")		}
 		
 		// Add edge to graph sf
 		add_edge(u,v,sf);
@@ -404,7 +442,7 @@ void msfPrim(Graph &g, Graph &sf)
 		// add v to the heap
 		nodes.minHeapInsert(v);
 		
-		// reset the heap after inserting
+		// reset the heap after inserting the node, v
 		nodes.minHeapDecreaseKey(nodes.getIndex(v),g);
 		
 	}
