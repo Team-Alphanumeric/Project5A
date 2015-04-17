@@ -47,6 +47,7 @@ public:
 
 	void maxHeapIncreaseKey(int i, U &g);
 	void minHeapDecreaseKey(int i, U &g);
+	void minHeapDecreaseKey(T &key, U &g);
 
 	void maxHeapInsert(T key, U &g);
 	void minHeapInsert(T key, U &g);
@@ -222,6 +223,12 @@ void heapV<T, U>::maxHeapIncreaseKey(int i, U &g)
 		swap(list[i], list[parent(i)]);
 		i = parent(i);
 	}
+}
+
+template <typename T, typename U>
+void heapV<T, U>::minHeapDecreaseKey(T &key, U &g)
+{
+	minHeapDecreaseKey(getIndex(key),g);
 }
 
 template <typename T, typename U>

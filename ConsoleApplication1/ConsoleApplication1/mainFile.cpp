@@ -284,25 +284,29 @@ void findSpanningForest(Graph &g, Graph &sf)
 			findPathBFSSpanningTree(g, *vItr);
 		}
 	}
+	edgify(g,sf);
+	return;
+}
 
+// adds in the edges for the new graph based on the marked edges from the old graph
+void edgify(Graph &oldbj, Graph &newgj)
+{
 	// create a graph with the same number of vertices
-	for (int i = 0; i < num_vertices(g); i++)
-	{
-		add_vertex(sf);
-	}
-	// add an edge to the new graph (sf) corresponding to the marked edges in the old graph (g)
-	pair<Graph::edge_iterator, Graph::edge_iterator> eItrRange = edges(g);
+	newgj = Graph(num_vertices(oldbj));
+	
+	// add an edge to the new graph (newgj) corresponding to the marked edges in the old graph (g)
+	pair<Graph::edge_iterator, Graph::edge_iterator> eItrRange = edges(oldbj);
 	for (Graph::edge_iterator eItr = eItrRange.first; eItr != eItrRange.second; ++eItr)
 	{
 		// Returns the target vertex of edge e.
-		Graph::vertex_descriptor targetVer = target(*eItr, g);
+		Graph::vertex_descriptor targetVer = target(*eItr, oldbj);
 		// Returns the source vertex of edge e.
-		Graph::vertex_descriptor sourceVer = source(*eItr, g);
+		Graph::vertex_descriptor sourceVer = source(*eItr, oldbj);
 
 		//if the edge is not marked
 		if (g[*eItr].marked)
 		{
-			add_edge(targetVer, sourceVer, sf);
+			add_edge(targetVer, sourceVer, newgj);
 			//cout << "Keeping edge between vertices " << targetVer << " and " << sourceVer << endl;
 		}
 		else
@@ -363,6 +367,17 @@ bool isCyclic(Graph &g)
 	return result;
 }
 
+// finds the min of definitively finitely exactly precisely only two numbers
+int min(int a, int b) {return ((a<b) ? a : b);}
+
+bool relaxTo0(int &nodeWeight, int edgeWeight)
+{
+	if(min(nodeWeight,edgeWeight) == edgeWeight)
+		nodeWeight = edgeWeight; return true;
+	else
+		return false;
+}
+
 void msfPrim(Graph &g, Graph &sf)
 {
 	// Unmark all nodes
@@ -373,7 +388,7 @@ void msfPrim(Graph &g, Graph &sf)
 	
 	// Attempt to mark and clear weight of the start node
 	try 
-	{	g[0].visited = true;	g[0].weight = 0; }
+	{	g[0].visited = true;	g[0].weight = 0; g[0].pred = -1; }
 	catch (...)
 	{	throw rangeError("In msfPrim: Unable to mark and/or w8 the start node");	}
 	
@@ -384,9 +399,10 @@ void msfPrim(Graph &g, Graph &sf)
 	// create vector for adding all of the nodes
 	vector<vertex_descriptor> all_nodes;
 		
-	// Get a pair containing iterators pointing the beginning and end of the
+	// Get a pair containing vertex iterators pointing the beginning and end of the
 	// list of nodes
 	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(Graph &g);
+
 	
 	// Loop over all nodes in the graph
 	for (Graph::vertex_iterator vItr= vItrRange.first; vItr != vItrRange.second; ++vItr)
@@ -401,52 +417,78 @@ void msfPrim(Graph &g, Graph &sf)
 	// declare algorithm variables: edge e, vertices u,v
 	edge_descriptor e;
 	vertex_descriptor u,v; 
+
+	// Get a pair containing adjacent vertex iterators pointing the beginning and end of the
+	// list of nodes
+	pair<Graph::adjacency_iterator, Graph::adjacency_iterator>  vAdjRange;
 	
+	// Get the edge if it exists and whether it exists
+	pair<Graph::edge_descriptor, bool> checkEdge;
+			
 	// For(i=1:numNodes-1)
 	for(int i=0; i<num_vertices(g) - 1; i++)
 	{
-		//// Find the/a cheapest edge e=(u,v) such that u is marked, v is unmarked and e is cheapest
-		
 		// get cheapest source node, u
 		u = nodes.extractMinHeapMinimum(g);
 		
-		/// find cheapest edge of cheapest node
-		// set e to default value
-		e = NULL; 
+		// visit the current node
+		g[u].visited = true;
 		
-		// declare edge weight max so far for this group of edges
-		ewmax = LargeValue;
-		
-		// Loop over all edges in the graph
-		for (Graph::edge_iterator eItr= eItrRange.first; eItr != eItrRange.second; ++eItr)
+		// mark the edge from this node to its predecessor
+		if(g[u].pred != -1)
 		{
-			// if this edge is cheaper than previous 
-			// and the source matches the cheapest node
-			if( (g[*eItr].weight < ewmax ) && (source(e,g) == u) )
+			checkEdge = edge(g[u].pred,u,g);
+			if(checkEdge.second)
 			{
-				// update edge we are using
-				e = *eItr;
-				// update maximum weight so far
-				ewmax = g[e].weight;
+				g[checkEdge.first].marked = true;
 			}
+			else
+			{	throw expressionError("In msfPrim: Unable to find previous edge from source vertex"); }
 		}
 		
-		if(e == NULL) { throw baseException("In msfPrim: Unable to find edge")		}
+		//// Find the/a cheapest edge e=(u,v) such that u is marked, v is unmarked and e is cheapest
 		
-		// Add edge to graph sf
-		add_edge(u,v,sf);
+		/// find cheapest edge of cheapest node
 		
-		// Mark target node v
-		g[v].marked = true;
+		// find adjacent vertices
+		vAdjRange = adjacent_vertices(Graph &g);
 		
-		// add v to the heap
-		nodes.minHeapInsert(v);
-		
-		// reset the heap after inserting the node, v
-		nodes.minHeapDecreaseKey(nodes.getIndex(v),g);
-		
+		// Loop over all edges in the graph
+		for (Graph::adjacency_iterator vAdj = vAdjRange.first; vAdj != vAdjRange.second; ++vAdj)
+		{
+			/* set each adjacent node's weight to the corresponding edge 
+			 weight (edge from the current node to adj node) if cheaper than current weight
+			*/
+			
+			// get the edge from current node, u, to adjacent node, v
+			v = *vAdj;
+			
+			// only process if v is unvisited
+			if( !g[v].visted )
+			{
+				// get the edge: throw error if it doesn't exist
+				checkEdge = edge(u, v, g);
+				if(checkEdge.second) { e = checkEdge.first;	}
+				else { throw expressionError("In msfPrim: unable to find the edge from the current node to the adjacent node");	}
+				
+				// relax the adjacent vertex versus a 0 current node weight
+				bool changed = relaxTo0(g[v].weight,e.weight);
+				
+				// if the weight changed, 
+				if(changed)	
+				{
+					//set the predecessor of the adjacent to the current node
+					g[v].pred = u; 
+						 
+					// reset the heap (because v may or may not have been changed)
+					nodes.minHeapDecreaseKey(v,g);
+				}
+			}
+		}	
 	}
-
+	// place the marked edges into sf
+	edgify(g,sf);
+	return;
 }
 
 
