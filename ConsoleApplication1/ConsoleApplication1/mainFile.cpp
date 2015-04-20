@@ -1,16 +1,17 @@
-
 #include <iostream>
 #include <limits.h>
-#include "d_except.h"
+#include <vector>
 #include <list>
 #include <fstream>
-#include "d_matrix.h"
 #include <queue>
-#include <vector>
-#include <stack>
-
 #include <boost/graph/adjacency_list.hpp>
+#include <stack>
+#include <queue>
+#include <list>
+#include <string>
 #include "heapV.h"
+#include "d_except.h"
+#include "d_matrix.h"
 
 #define LargeValue 99999999
 
@@ -74,6 +75,10 @@ void initializeGraph(Graph &g,
 	}
 }
 
+// Modifies the new graph to be equivalent to the 
+// old graph but with only the marked edges
+void edgify(Graph &oldbj, Graph &newgj);
+
 // Mark all nodes in g as not visited.
 void setNodeWeights(int weight, Graph &g)
 {
@@ -127,10 +132,11 @@ void clearPred(Graph &g)
 	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
 	for (Graph::vertex_iterator v = vItrRange.first; v != vItrRange.second; ++v)
 	{
-		//marks each vertice as not visited		
-		g[*v].pred = NULL;
+		//marks each vertex's predecessor as undefined
+		g[*v].pred = -1;
 	}
 }
+
 void findPathDFSRecursive(Graph &g, Graph::vertex_descriptor node)
 {
 	//mark the current node as visited
@@ -291,6 +297,9 @@ void findSpanningForest(Graph &g, Graph &sf)
 // adds in the edges for the new graph based on the marked edges from the old graph
 void edgify(Graph &oldbj, Graph &newgj)
 {
+	// variable for storing edges
+	pair<Graph::edge_descriptor, bool> newEdge;
+	
 	// create a graph with the same number of vertices
 	newgj = Graph(num_vertices(oldbj));
 	
@@ -303,10 +312,17 @@ void edgify(Graph &oldbj, Graph &newgj)
 		// Returns the source vertex of edge e.
 		Graph::vertex_descriptor sourceVer = source(*eItr, oldbj);
 
-		//if the edge is not marked
-		if (g[*eItr].marked)
+		//if the edge is marked in the old graph, add it to the new graph
+		if (oldbj[*eItr].marked)
 		{
-			add_edge(targetVer, sourceVer, newgj);
+			// create the corresponding edge in the new graph
+			newEdge = add_edge(targetVer, sourceVer, newgj);
+			if(!newEdge.second)
+				throw referenceError("In edgify: edge dupluicated in adding edges to the new graph");
+			
+			// preserve the weight of the old edge
+			newgj[newEdge.first].weight = oldbj[*eItr].weight;
+			
 			//cout << "Keeping edge between vertices " << targetVer << " and " << sourceVer << endl;
 		}
 		else
@@ -315,6 +331,25 @@ void edgify(Graph &oldbj, Graph &newgj)
 		}
 	}
 	return;
+}
+
+
+// returns the cumaltive cost of all of the edges in the graph
+int edgeCost(Graph &g)
+{
+	// total cost variable
+	int cost = 0;
+	
+	// Get a pair containing iterators pointing the beginning and end of the list of edges
+	pair<Graph::edge_iterator, Graph::edge_iterator> eItrRange = edges(g);
+
+	// Loop over all edges in the graph
+	for (Graph::edge_iterator eItr= eItrRange.first; eItr != eItrRange.second; ++eItr)
+    {
+    	// add the cost of the edge to the total cost
+    	cost += g[*eItr].weight;
+    }  
+    return cost;
 }
 
 //Returns true if the graph g is connected. Otherwise false
@@ -338,6 +373,51 @@ bool isConnected(Graph &g)
 		}
 	}
 	return true;
+}
+
+// Returns the number of connected sub-graphs exist within the graph
+int connections(Graph &g)
+{
+	// mark all the nodes in the graph as not visited
+	clearVisited(g);
+	
+	// find bounds for iterating across all vertices
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
+
+	Graph::vertex_descriptor v;
+	
+	int numConnected = 0; // nuber of connected sub-graphs
+	int i; // iteration variable
+	int numV = num_vertices(g); // nubmer of vertices
+	bool complete = false; // algorithm completion
+	
+	// while the algorithm hasn't terminated
+	while(!complete)
+	{
+		i = 0;
+		// search for an unvisited node
+		for (Graph::vertex_iterator vItr = vItrRange.first; vItr != vItrRange.second; ++vItr)
+		{
+			// select node if unvisted, and break to traversal
+			if (!g[*vItr].visited)
+			{
+				v = *vItr; break;
+			}
+		
+			// if no node is unvisted after checking all vertices, algorithm is complete
+			if(++i == numV)
+				complete = true;
+		}
+		
+		// if algorithm is not complete, traverse the sub-graph of the selected node
+		if(!complete)
+		{
+			findPathDFSRecursive(g,v);	// traverse sub-graph
+			numConnected++; // increment number of connected sub-graphs traverse
+		}
+	}
+	
+	return numConnected;
 }
 
 //Returns true if the graph g contains a cycle. Otherwise, returns false
@@ -373,77 +453,93 @@ int min(int a, int b) {return ((a<b) ? a : b);}
 bool relaxTo0(int &nodeWeight, int edgeWeight)
 {
 	if(min(nodeWeight,edgeWeight) == edgeWeight)
-		nodeWeight = edgeWeight; return true;
+	{	nodeWeight = edgeWeight; return true;	}
 	else
-		return false;
+	{	return false; }
 }
 
 void msfPrim(Graph &g, Graph &sf)
 {
 	// Unmark all nodes
-	clearVisited(g);
+	clearVisited(g); clearMarkedEdges(g); clearPred(g);
 	
 	// set all nodes as unreachable
 	setNodeWeights(LargeValue,g);
 	
 	// Attempt to mark and clear weight of the start node
 	try 
-	{	g[0].visited = true;	g[0].weight = 0; g[0].pred = -1; }
+	{	g[0].weight = 0; g[0].pred = -1; }
 	catch (...)
 	{	throw rangeError("In msfPrim: Unable to mark and/or w8 the start node");	}
 	
 	
-	// declare heap for the nodes
-	heapV nodes();
-
+	// declare the heap for the nodes that we will use as a priority queue
+	heapV<Graph::vertex_descriptor, Graph> nodes;
+	
 	// create vector for adding all of the nodes
-	vector<vertex_descriptor> all_nodes;
+	vector<Graph::vertex_descriptor> allNodes;
 		
 	// Get a pair containing vertex iterators pointing the beginning and end of the
 	// list of nodes
-	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(Graph &g);
+	pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
 
 	
 	// Loop over all nodes in the graph
 	for (Graph::vertex_iterator vItr= vItrRange.first; vItr != vItrRange.second; ++vItr)
-	{	all_nodes.push_back(*vItr);	}
+	{	allNodes.push_back(*vItr);	}
 	
 	// initilize the heap with all of the nodes
-	nodes.initializeMinHeap(all_nodes,g);
-		
+	nodes.initializeMinHeap(allNodes,g);
+	
 	// create graph with same number of vertices as the previous graph
 	sf = Graph(num_vertices(g)); // set sf to a new graph initialized to same # of vertices 
 	
 	// declare algorithm variables: edge e, vertices u,v
-	edge_descriptor e;
-	vertex_descriptor u,v; 
+	Graph::edge_descriptor e;
+	Graph::vertex_descriptor u,v; 
 
 	// Get a pair containing adjacent vertex iterators pointing the beginning and end of the
 	// list of nodes
 	pair<Graph::adjacency_iterator, Graph::adjacency_iterator>  vAdjRange;
 	
 	// Get the edge if it exists and whether it exists
-	pair<Graph::edge_descriptor, bool> checkEdge;
+	pair<Graph::edge_descriptor, bool> checkEdge, checkEdge2;
 			
 	// For(i=1:numNodes-1)
-	for(int i=0; i<num_vertices(g) - 1; i++)
+	for(int i=0; i<num_vertices(g); i++)
 	{
 		// get cheapest source node, u
 		u = nodes.extractMinHeapMinimum(g);
 		
+		// if this node is unreachable, it is from a disconnected sub-graph
+		// restart the algorithm by treating it as the next start node
+		// by resetting the weight
+		if(g[u].weight == LargeValue)
+			g[u].weight = 0;
+		
 		// visit the current node
 		g[u].visited = true;
 		
-		// mark the edge from this node to its predecessor
+		// mark the edge doublet from this node to its predecessor
 		if(g[u].pred != -1)
 		{
 			checkEdge = edge(g[u].pred,u,g);
+			checkEdge2 = edge(u,g[u].pred,g);
+		
 			if(checkEdge.second)
 			{
 				g[checkEdge.first].marked = true;
 			}
 			else
 			{	throw expressionError("In msfPrim: Unable to find previous edge from source vertex"); }
+		
+			if(checkEdge2.second)
+			{
+				g[checkEdge2.first].marked = true;
+			}
+			else
+			{	throw expressionError("In msfPrim: Unable to find previous edge from target vertex"); }
+		
 		}
 		
 		//// Find the/a cheapest edge e=(u,v) such that u is marked, v is unmarked and e is cheapest
@@ -451,7 +547,7 @@ void msfPrim(Graph &g, Graph &sf)
 		/// find cheapest edge of cheapest node
 		
 		// find adjacent vertices
-		vAdjRange = adjacent_vertices(Graph &g);
+		vAdjRange = adjacent_vertices(u,g);
 		
 		// Loop over all edges in the graph
 		for (Graph::adjacency_iterator vAdj = vAdjRange.first; vAdj != vAdjRange.second; ++vAdj)
@@ -464,22 +560,23 @@ void msfPrim(Graph &g, Graph &sf)
 			v = *vAdj;
 			
 			// only process if v is unvisited
-			if( !g[v].visted )
+			if( !g[v].visited )
 			{
 				// get the edge: throw error if it doesn't exist
 				checkEdge = edge(u, v, g);
+				
 				if(checkEdge.second) { e = checkEdge.first;	}
 				else { throw expressionError("In msfPrim: unable to find the edge from the current node to the adjacent node");	}
 				
 				// relax the adjacent vertex versus a 0 current node weight
-				bool changed = relaxTo0(g[v].weight,e.weight);
+				bool changed = relaxTo0(g[v].weight,g[e].weight);
 				
 				// if the weight changed, 
 				if(changed)	
 				{
 					//set the predecessor of the adjacent to the current node
-					g[v].pred = u; 
-						 
+					g[v].pred = u;
+								 
 					// reset the heap (because v may or may not have been changed)
 					nodes.minHeapDecreaseKey(v,g);
 				}
@@ -491,19 +588,76 @@ void msfPrim(Graph &g, Graph &sf)
 	return;
 }
 
-
-
-int main()
+void analyzeGraph(Graph &g)
 {
-	char x;
+		Graph::vertex_descriptor u, v;
+		Graph::edge_descriptor e;
+		pair<Graph::vertex_iterator, Graph::vertex_iterator> vItrRange = vertices(g);
+		pair<Graph::edge_iterator, Graph::edge_iterator> eItrRange = edges(g);
+
+		
+		cout << "The graph contains vertices ";
+		int i=0; // manual counter
+		for (Graph::vertex_iterator vItr= vItrRange.first; vItr != vItrRange.second; ++vItr)
+		{
+			cout << *vItr;
+			cout << ( (i<num_vertices(g) - 1) ? ", " : "." );
+			i++; // iteration counter
+		} cout << endl;
+		
+		cout << "The graph contains edges ";
+
+		i=0; // manual counter
+		for (Graph::edge_iterator eItr= eItrRange.first; eItr != eItrRange.second; ++eItr)
+		{
+			cout << *eItr;
+			cout << ( (i<num_vertices(g) - 1) ? ", " : "." );
+			i++; // iteration counter
+		} cout << endl;
+ 
+		bool cyclic = isCyclic(g); 
+		bool connected = isConnected(g); 
+		int numCon = connections(g);
+		int cost = edgeCost(g);
+		
+		
+		cout << "The graph ";
+		cout << ((cyclic) ? "contains" : "does not contain");
+		cout << " a cycle, and ";
+		cout << ((connected) ? "is" : "is not");
+		cout << " connected with " << numCon << " sub-graph";
+		cout << ((connected) ? "," : "s,");
+		cout << " and a total edge cost of " << cost << "." << endl;
+		
+}
+
+
+string int2string(int i)
+{
+	string txt="", temp="";
+	while(i != 0)
+	{
+		txt += char((i%10)+48);
+		i = i/10;
+	}
+	temp.resize(txt.size());
+	for(i=0;i<txt.size();++i)
+	{ temp[i] = txt[txt.size()-1-i]; }
+	return temp;
+}
+
+
+
+int exploreGraph(int graphNum)
+{
 	ifstream fin;
-	stack <int> moves;
-	string fileName;
 
 	// Read the name of the graph from the keyboard or
 	// hard code it here for testing.
+	string path = "E:/Users/Thurston Brevett/Documents/Northeastern/Courses/Spring 2015/Algorithms/Project 5/";
+	string file = "graph";	
+	string fileName = path + file + int2string(graphNum) + ".txt";
 
-	fileName = "graph3.txt";
 
 	//   cout << "Enter filename" << endl;
 	//   cin >> fileName;
@@ -519,67 +673,40 @@ int main()
 	try
 
 	{
-		cout << "Reading graph" << endl;
+		// initialize the graph	
+		cout << "Reading graph " << graphNum << endl;
 		Graph g;
 
 		Graph::vertex_descriptor start, end;
 
 		initializeGraph(g, start, end, fin);
 		cout << "Num nodes: " << num_vertices(g) << endl;
-		cout << "Num edges: " << num_edges(g) << endl;
-		cout << endl;
-
-		//cout << g;
+		cout << "Num edges: " << num_edges(g) << endl;		
+		
+		cout << endl << endl << "Analyzing original graph:" << endl;
+		analyzeGraph(g);
+		
 		clearVisited(g);
-		bool connected = false;
-		bool cyclic = false;
-
-		cout << "Calling isCyclic" << endl;
-		cyclic = isCyclic(g); 
-
-		if (cyclic)
-			cout << "Graph contains a cycle" << endl;
-		else
-			cout << "Graph does not contain a cycle" << endl;
-
-		cout << endl;
-
-		cout << "Calling isConnected" << endl;
-		connected = isConnected(g); 
-
-		if (connected)
-			cout << "Graph is connected" << endl;
-		else
-			cout << "Graph is not connected" << endl;
-
-		cout << endl;
-		cout << "Finding spanning forest" << endl;
 
 		// Initialize an empty graph to contain the spanning forest
-		Graph sf(num_vertices(g));
-		clearVisited(sf);
+		Graph sf;
 		findSpanningForest(g, sf); 
 
-		cout << endl;
+		cout << endl << endl << "Analyzing default spanning forest graph:" << endl;
+		analyzeGraph(sf);
+		
+		
+		// Initialize an empty graph to contain the spanning forest
+		Graph msf;
+		msfPrim(g, msf); 
 
-		cout << "Calling isConnected" << endl;
-		connected = isConnected(sf); 
-
-		if (connected)
-			cout << "Graph is connected" << endl;
-		else
-			cout << "Graph is not connected" << endl;
-		cout << endl;
-
-		cout << "Calling isCyclic" << endl;
-		cyclic = isCyclic(sf); 
-
-		if (cyclic)
-			cout << "Graph contains a cycle" << endl;
-		else
-			cout << "Graph does not contain a cycle" << endl;
-		cout << endl;
+		cout << endl << endl << "Analyzing Prim's graph:" << endl;
+		analyzeGraph(msf);
+		
+		
 		system("pause");
+		cout << endl << endl << endl << endl << endl;
+	
 	}
 	catch (indexRangeError &ex)
 	{
@@ -589,4 +716,10 @@ int main()
 	{
 		cout << ex.what() << endl; exit(1);
 	}
+}
+
+int main()
+{
+	for(int i=1; i<=4; i++)
+		exploreGraph(i);
 }

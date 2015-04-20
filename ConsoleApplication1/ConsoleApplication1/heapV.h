@@ -89,7 +89,7 @@ void heapV<T, U>::initializeMinHeap(vector<T> list2, U &g)
 	for (int i = 0; i < list2.size(); i++)
 		list.push_back(list2[i]);
 
-	buildMinHeap(size());
+	buildMinHeap(size(), g);
 }
 
 
