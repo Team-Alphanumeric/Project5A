@@ -417,7 +417,7 @@ int main()
 			cout << "Graph is not connected" << endl;
 		cout << endl;
 
-		cout << "Calling isCyclic" << endl;
+		cout << "Calling isCyclic" << endl; 
 		cyclic = isCyclic(sf); 
 
 		if (cyclic)
