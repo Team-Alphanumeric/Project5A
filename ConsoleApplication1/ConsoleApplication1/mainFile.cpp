@@ -235,11 +235,6 @@ bool BFSFindCycle(Graph &g, Graph::vertex_descriptor startNode)
 			//push it onto the back of the queue.
 			//If an adjacent node is already visited that is not
 			//the predessor, then that means that
-
-			//cout << "The current node is " << v << endl;
-			//cout << "The predessor of node " << v << " is " << g[v].pred << endl;			
-			//cout << "The adajcent node is " << *vItr << endl << endl;
-
 			//there is a cycle in that graph because that node has already been visited
 			if (g[*vItr].visited && (g[v].pred) != *vItr)
 			{
@@ -323,11 +318,9 @@ void edgify(Graph &oldbj, Graph &newgj)
 			// preserve the weight of the old edge
 			newgj[newEdge.first].weight = oldbj[*eItr].weight;
 			
-			//cout << "Keeping edge between vertices " << targetVer << " and " << sourceVer << endl;
 		}
 		else
 		{
-			//cout << "Removing edge between vertices " << targetVer << " and " << sourceVer << endl;
 		}
 	}
 	return;
@@ -450,8 +443,13 @@ bool isCyclic(Graph &g)
 // finds the min of definitively finitely exactly precisely only two numbers
 int min(int a, int b) {return ((a<b) ? a : b);}
 
+//this function takes in the nodeWeight adn the edgeWeight and
+//returns whether the value was relaxed or changed and returns
+//a boolean with the result
 bool relaxTo0(int &nodeWeight, int edgeWeight)
 {
+	//if the minimum value is changed, aka, the edge Weight is less then the 
+	//current weight of the node return true, else return false.
 	if(min(nodeWeight,edgeWeight) == edgeWeight)
 	{	nodeWeight = edgeWeight; return true;	}
 	else
@@ -525,7 +523,7 @@ void msfPrim(Graph &g, Graph &sf)
 		{
 			checkEdge = edge(g[u].pred,u,g);
 			checkEdge2 = edge(u,g[u].pred,g);
-		
+			
 			if(checkEdge.second)
 			{
 				g[checkEdge.first].marked = true;
@@ -656,11 +654,7 @@ int exploreGraph(int graphNum)
 	// hard code it here for testing.
 	string path = "E:/Users/Thurston Brevett/Documents/Northeastern/Courses/Spring 2015/Algorithms/Project 5/";
 	string file = "graph";	
-	string fileName = path + file + int2string(graphNum) + ".txt";
-
-
-	//   cout << "Enter filename" << endl;
-	//   cin >> fileName;
+	string fileName = file + int2string(graphNum) + ".txt";
 
 	fin.open(fileName.c_str());
 	if (!fin)
@@ -721,5 +715,5 @@ int exploreGraph(int graphNum)
 int main()
 {
 	for(int i=1; i<=4; i++)
-		exploreGraph(i);
+		exploreGraph(i); 
 }
